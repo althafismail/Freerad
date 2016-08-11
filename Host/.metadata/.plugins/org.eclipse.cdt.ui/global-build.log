@@ -324,3 +324,11 @@ Finished building: Freerad.siz
 Finished building: Freerad.hex
  
  
+20:04:41 **** Incremental Build of configuration Debug for project Freerad ****
+make -j4 all 
+Invoking: Cross ARM GNU Print Size
+arm-none-eabi-size --format=berkeley "Freerad.elf"
+   text	   data	    bss	    dec	    hex	filename
+  54792	    140	  21456	  76388	  12a64	Freerad.elf
+Finished building: Freerad.siz
+ 
