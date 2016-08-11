@@ -1,0 +1,132 @@
+/*
+ * App_Tasks.cpp
+ *
+ *  Created on: Jul 18, 2016
+ *      Author: Althaf.Ismail
+ */
+
+// C/C++ includes
+#include <stdio.h>
+
+// Freerad includes
+#include "App_Tasks.h"
+
+/*!
+ * @brief Task responsible for printing of "Hello world." message.
+ * Usage:
+ * 	{
+ *		char tempString[PRINTF_STRING_SIZE] = {0};
+ *		sprintf(tempString, "   ");
+ *		xQueueSend(Q_Printf, tempString, 0);
+ *	}
+ *
+ */
+void Printf_Task(void *pvParameters)
+{
+	static char tempString[PRINTF_STRING_SIZE];
+
+	for(;;)
+	{
+        xQueueReceive(Q_Printf, tempString, portMAX_DELAY);
+        printf("%s", tempString);
+	}
+}
+
+void GPIOA_IRQ_Task(void *pvParameters)
+{
+	static uint32_t notificationValue = 0;
+//	static uint32_t previousValue = 0;
+//	static uint32_t changedValue = 0;
+	uint8_t i;
+	static TickType_t clockIn, clockOut;
+//	static char tempString[20] = {0};
+
+	// Enable interrupt at this point so it wouldn't crash if IRQ comes before task is ready
+	PORT_SetPinInterruptConfig(PORT_SWITCH, kPORT_InterruptEitherEdge);
+
+	for(;;)
+	{
+		clockOut = xTaskGetTickCount();
+		xTaskNotifyWait(0x0, 0xffffffff, &notificationValue, portMAX_DELAY);
+		clockIn = xTaskGetTickCount();
+
+//		changedValue = notificationValue ^ previousValue;
+
+		if((clockIn - clockOut) >= 32)	{
+			for(i=0; i<32; i++)	{
+//				if(changedValue & (1 << i)) {
+				if(notificationValue & (1 << i)) {
+					if(	GPIO_ReadPinInput(GPIOA, i))
+						sprintf(logString, "GPIOA Pin %d Released\r\n", i);
+					else
+						sprintf(logString, "GPIOA Pin %d Pressed\r\n", i);
+					xQueueSend(Q_Printf, logString, 0);
+				}
+			}
+//			previousValue = notificationValue;
+		}
+	}
+}
+void GPIOC_IRQ_Task(void *pvParameters)
+{
+	static uint32_t notificationValue = 0;
+	static TickType_t clockIn, clockOut;
+//	static char tempString[20] = {0};
+
+	// Enable interrupt at this point so it wouldn't crash if IRQ comes before task is ready
+	PORT_SetPinInterruptConfig(PORT_PUSHBUTTON, kPORT_InterruptEitherEdge);
+
+	for(;;)
+	{
+		clockOut = xTaskGetTickCount();
+		xTaskNotifyWait(0x0, 0xffffffff, &notificationValue, portMAX_DELAY);
+		clockIn = xTaskGetTickCount();
+
+		if((clockIn - clockOut) >= 32)	{
+			if(	GPIO_ReadPinInput(PIN_PUSHBUTTON))
+				sprintf(logString, "GPIOC: %08x Released\r\n", (unsigned int)notificationValue);
+			else
+				sprintf(logString, "GPIOC: %08x Pressed\r\n", (unsigned int)notificationValue);
+			xQueueSend(Q_Printf, logString, 0);
+		}
+	}
+}
+
+void FTM2_IRQ_Task(void *pvParameters)
+{
+	static uint32_t notificationValue = 0;
+	static TickType_t clockIn, clockOut;
+//	static char tempString[20] = {0};
+
+	// Enable interrupt at this point so it wouldn't crash if IRQ comes before task is ready
+	FTM_EnableInterrupts(FTM2, kFTM_TimeOverflowInterruptEnable);
+
+	for(;;)
+	{
+		clockOut = xTaskGetTickCount();
+		xTaskNotifyWait(0x0, 0xffffffff, &notificationValue, portMAX_DELAY);
+		clockIn = xTaskGetTickCount();
+
+		if((clockIn - clockOut) >= 32)	{
+			if((notificationValue & 0x00060000) && !(notificationValue & 0x00000003))
+				sprintf(logString, "Enc Slow CW\r\n");
+			else if(!(notificationValue & 0x00060000) && (notificationValue & 0x00000003))
+				sprintf(logString, "Enc Slow CCW\r\n");
+			xQueueSend(Q_Printf, logString, 0);
+		}
+		else if((clockIn - clockOut) >= 8)	{
+			if((notificationValue & 0x00060000) && !(notificationValue & 0x00000003))
+				sprintf(logString, "Enc Fast CW\r\n");
+			else if(!(notificationValue & 0x00060000) && (notificationValue & 0x00000003))
+				sprintf(logString, "Enc Fast CCW\r\n");
+			xQueueSend(Q_Printf, logString, 0);
+		}
+		else if((clockIn - clockOut) >= 2)	{
+			if((notificationValue & 0x00060000) && !(notificationValue & 0x00000003))
+				sprintf(logString, "Enc Max CW\r\n");
+			else if(!(notificationValue & 0x00060000) && (notificationValue & 0x00000003))
+				sprintf(logString, "Enc Max CCW\r\n");
+			xQueueSend(Q_Printf, logString, 0);
+		}
+	}
+}

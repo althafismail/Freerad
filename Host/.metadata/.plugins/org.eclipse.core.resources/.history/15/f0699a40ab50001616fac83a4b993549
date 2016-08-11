@@ -1,0 +1,38 @@
+/*
+ * App_CallbackFunctions.c
+ *
+ *  Created on: Jul 18, 2016
+ *      Author: Althaf.Ismail
+ */
+
+// C/C++ Includes
+#include <stdio.h>
+
+// Freerad includes
+#include "App_CallbackFunctions.h"
+
+/*!
+ * @brief Timer callback.
+ */
+void vExampleTimerCallback(TimerHandle_t xTimer)
+{
+	GPIO_TogglePinsOutput(BIT_LED_A);
+}
+
+void PORTA_IRQHandler(void)
+{
+//	uint32_t temp = GPIO_GetPinsInterruptFlags(GPIOA);
+	BaseType_t wakeUp;
+	GPIO_ClearPinsInterruptFlags(GPIOA, 0xFFFFFFFF);
+	xTaskNotifyFromISR(GPIOA_IRQ_TaskHandle, 1, eSetBits, &wakeUp);
+//	GPIO_TogglePinsOutput(BIT_LED_B);
+}
+
+void PORTC_IRQHandler(void)
+{
+//	uint32_t temp = GPIO_GetPinsInterruptFlags(GPIOC);
+//	BaseType_t wakeUp;
+	GPIO_ClearPinsInterruptFlags(GPIOC, 0xFFFFFFFF);
+//	xTaskNotifyFromISR(GPIOC_IRQ_TaskHandle, 1, eSetBits, &wakeUp);
+	GPIO_TogglePinsOutput(BIT_LED_B);
+}
